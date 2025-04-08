@@ -5,7 +5,6 @@ import (
 	"sync"
 
 	cdcSync "github.com/Conflux-Chain/confura-data-cache/nearhead/sync"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -22,7 +21,6 @@ func init() {
 }
 
 func startCacheService(*cobra.Command, []string) {
-	logrus.Info("Start to cache near head data")
 	dataCtx := MustInitDataContext()
 	defer dataCtx.Close()
 
