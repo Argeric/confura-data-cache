@@ -2,6 +2,8 @@ package cache
 
 import (
 	"container/list"
+	"encoding/json"
+	"github.com/sirupsen/logrus"
 	"sync"
 
 	"github.com/Conflux-Chain/confura-data-cache/nearhead/config"
@@ -66,6 +68,12 @@ func (c *EthCache) AddBlock(block *types.Block) {
 	c.blocks.mutex.Lock()
 	defer c.blocks.mutex.Unlock()
 
+	blockj, _ := json.Marshal(block)
+	logrus.WithFields(logrus.Fields{
+		"bn":    block.Number.Uint64(),
+		"block": string(blockj),
+	}).Info("debug add block ===1===")
+
 	blockSize := block.Size
 	c.evictIfNeeded(c.blocks.size, blockSize, c.config.CacheSizeBlocks, c.blocks, c.blocks.bns)
 
@@ -78,6 +86,12 @@ func (c *EthCache) AddReceipts(blockNumber uint64, receipts []types.Receipt) {
 	c.receipts.mutex.Lock()
 	defer c.receipts.mutex.Unlock()
 
+	receiptsj, _ := json.Marshal(receipts)
+	logrus.WithFields(logrus.Fields{
+		"bn":       blockNumber,
+		"receipts": string(receiptsj),
+	}).Info("debug add receipts ===2===")
+
 	receiptsSize := uint64(0)
 	c.evictIfNeeded(c.receipts.size, receiptsSize, c.config.CacheSizeReceipts, c.receipts, c.receipts.bns)
 
@@ -89,6 +103,12 @@ func (c *EthCache) AddReceipts(blockNumber uint64, receipts []types.Receipt) {
 func (c *EthCache) AddTraces(blockNumber uint64, traces []types.LocalizedTrace) {
 	c.traces.mutex.Lock()
 	defer c.traces.mutex.Unlock()
+
+	tracesj, _ := json.Marshal(traces)
+	logrus.WithFields(logrus.Fields{
+		"bn":     blockNumber,
+		"traces": string(tracesj),
+	}).Info("debug add traces ===3===")
 
 	traceSize := uint64(0)
 	c.evictIfNeeded(c.traces.size, traceSize, c.config.CacheSizeTraces, c.traces.cache, c.traces.bns)
