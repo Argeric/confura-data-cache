@@ -74,12 +74,12 @@ func (c *EthCache) AddBlock(block *types.Block) {
 		"block": string(blockj),
 	}).Info("debug add block ===1===")
 
-	blockSize := block.Size
+	/*blockSize := block.Size
 	c.evictIfNeeded(c.blocks.size, blockSize, c.config.CacheSizeBlocks, c.blocks, c.blocks.bns)
 
 	c.blocks.bns.PushFront(block.Number)
 	c.blocks.cache[block.Number.Uint64()] = block
-	c.blocks.size += blockSize
+	c.blocks.size += blockSize*/
 }
 
 func (c *EthCache) AddReceipts(blockNumber uint64, receipts []types.Receipt) {
@@ -92,12 +92,12 @@ func (c *EthCache) AddReceipts(blockNumber uint64, receipts []types.Receipt) {
 		"receipts": string(receiptsj),
 	}).Info("debug add receipts ===2===")
 
-	receiptsSize := uint64(0)
+	/*receiptsSize := uint64(0)
 	c.evictIfNeeded(c.receipts.size, receiptsSize, c.config.CacheSizeReceipts, c.receipts, c.receipts.bns)
 
 	c.receipts.bns.PushFront(blockNumber)
 	c.receipts.cache[blockNumber] = receipts
-	c.receipts.size += receiptsSize
+	c.receipts.size += receiptsSize*/
 }
 
 func (c *EthCache) AddTraces(blockNumber uint64, traces []types.LocalizedTrace) {
@@ -110,12 +110,12 @@ func (c *EthCache) AddTraces(blockNumber uint64, traces []types.LocalizedTrace) 
 		"traces": string(tracesj),
 	}).Info("debug add traces ===3===")
 
-	traceSize := uint64(0)
+	/*traceSize := uint64(0)
 	c.evictIfNeeded(c.traces.size, traceSize, c.config.CacheSizeTraces, c.traces.cache, c.traces.bns)
 
 	c.traces.bns.PushFront(blockNumber)
 	c.traces.cache[blockNumber] = traces
-	c.traces.size += traceSize
+	c.traces.size += traceSize*/
 }
 
 func (c *EthCache) evictIfNeeded(currentSize uint64, newItemSize uint64, maxSize uint64,
