@@ -19,7 +19,7 @@ var (
 
 type EthSyncer struct {
 	eth          *web3go.Client
-	memory       *cache.EthCache
+	Memory       *cache.EthCache
 	currentBlock uint64
 }
 
@@ -32,7 +32,7 @@ func MustNewEthSyncer(eth *web3go.Client) *EthSyncer {
 
 	return &EthSyncer{
 		eth:    eth,
-		memory: memory,
+		Memory: memory,
 	}
 }
 
@@ -102,7 +102,7 @@ func (s *EthSyncer) cacheBlock(blockNumber uint64) error {
 		return err
 	}
 
-	if err := s.memory.Set(block, receipts, traces); err != nil {
+	if err := s.Memory.Set(block, receipts, traces); err != nil {
 		return err
 	}
 
