@@ -45,20 +45,101 @@ func TestEthCache_Set(t *testing.T) {
 
 func TestEthCache_GetBlockByHash(t *testing.T) {
 	cache := createTestCache()
-	blocks, receipts, traces := createTestData(t)
-	assert.Nil(t, cache.Set(blocks, receipts, traces))
+	block, receipts, traces := createTestData(t)
+	assert.Len(t, block.Transactions.Transactions(), 1)
+	assert.Nil(t, cache.Set(block, receipts, traces))
 
-	// get block by hash with txs
+	// get block by hash with tx details
 	block, exist := cache.GetBlockByHash(common.HexToHash("0x5f9cecca56bd3bfda5ba448b36e7f22c9448ed52b2eff79379e38ab5b4c421e6"), false)
 	assert.True(t, exist)
 	assert.Equal(t, uint64(120177555), block.Number.Uint64())
 	assert.Equal(t, common.HexToHash("0x5f9cecca56bd3bfda5ba448b36e7f22c9448ed52b2eff79379e38ab5b4c421e6"), block.Hash)
-	assert.Len(t, block.Transactions.Transactions(), 1)
+	assert.Len(t, block.Transactions.Hashes(), 1)
 
-	// get block by hash with hashes
+	// get block by hash with tx hashes
 	block, exist = cache.GetBlockByHash(common.HexToHash("0x5f9cecca56bd3bfda5ba448b36e7f22c9448ed52b2eff79379e38ab5b4c421e6"), true)
 	assert.True(t, exist)
 	assert.Equal(t, uint64(120177555), block.Number.Uint64())
 	assert.Equal(t, common.HexToHash("0x5f9cecca56bd3bfda5ba448b36e7f22c9448ed52b2eff79379e38ab5b4c421e6"), block.Hash)
+	assert.Len(t, block.Transactions.Transactions(), 1)
+}
+
+func TestEthCache_GetBlockByNumber(t *testing.T) {
+	cache := createTestCache()
+	block, receipts, traces := createTestData(t)
+	assert.Nil(t, cache.Set(block, receipts, traces))
+
+	// get block by number with tx details
+	block, exist := cache.GetBlockByNumber(120177555, false)
+	assert.True(t, exist)
+	assert.Equal(t, uint64(120177555), block.Number.Uint64())
+	assert.Equal(t, common.HexToHash("0x5f9cecca56bd3bfda5ba448b36e7f22c9448ed52b2eff79379e38ab5b4c421e6"), block.Hash)
 	assert.Len(t, block.Transactions.Hashes(), 1)
+
+	// get block by number with tx hashes
+	block, exist = cache.GetBlockByNumber(120177555, true)
+	assert.True(t, exist)
+	assert.Equal(t, uint64(120177555), block.Number.Uint64())
+	assert.Equal(t, common.HexToHash("0x5f9cecca56bd3bfda5ba448b36e7f22c9448ed52b2eff79379e38ab5b4c421e6"), block.Hash)
+	assert.Len(t, block.Transactions.Transactions(), 1)
+}
+
+func TestEthCache_GetTransactionByHash(t *testing.T) {
+	cache := createTestCache()
+	block, receipts, traces := createTestData(t)
+	assert.Nil(t, cache.Set(block, receipts, traces))
+
+	tx, exist := cache.GetTransactionByHash(common.HexToHash("0x302df74adbc6f7481d341c2e09814b7e777624d05e3caccbc51a351f7749bb19"))
+	assert.True(t, exist)
+	assert.Equal(t, uint64(120177555), tx.BlockNumber.Uint64())
+	assert.Equal(t, common.HexToHash("0x302df74adbc6f7481d341c2e09814b7e777624d05e3caccbc51a351f7749bb19"), tx.Hash)
+}
+
+func TestEthCache_GetBlockReceipts(t *testing.T) {
+	cache := createTestCache()
+	block, receipts, traces := createTestData(t)
+	assert.Nil(t, cache.Set(block, receipts, traces))
+
+	receipts, exist := cache.GetBlockReceipts(120177555)
+	assert.True(t, exist)
+	assert.Len(t, receipts, 1)
+	assert.Equal(t, uint64(120177555), receipts[0].BlockNumber)
+	assert.Equal(t, common.HexToHash("0x5f9cecca56bd3bfda5ba448b36e7f22c9448ed52b2eff79379e38ab5b4c421e6"), receipts[0].BlockHash)
+	assert.Equal(t, common.HexToHash("0x302df74adbc6f7481d341c2e09814b7e777624d05e3caccbc51a351f7749bb19"), receipts[0].TransactionHash)
+}
+
+func TestEthCache_GetTransactionReceipt(t *testing.T) {
+	cache := createTestCache()
+	block, receipts, traces := createTestData(t)
+	assert.Nil(t, cache.Set(block, receipts, traces))
+
+	receipt, exist := cache.GetTransactionReceipt(common.HexToHash("0x302df74adbc6f7481d341c2e09814b7e777624d05e3caccbc51a351f7749bb19"))
+	assert.True(t, exist)
+	assert.Equal(t, uint64(120177555), receipt.BlockNumber)
+	assert.Equal(t, common.HexToHash("0x5f9cecca56bd3bfda5ba448b36e7f22c9448ed52b2eff79379e38ab5b4c421e6"), receipt.BlockHash)
+	assert.Equal(t, common.HexToHash("0x302df74adbc6f7481d341c2e09814b7e777624d05e3caccbc51a351f7749bb19"), receipt.TransactionHash)
+}
+
+func TestEthCache_GetBlockTraces(t *testing.T) {
+	cache := createTestCache()
+	block, receipts, traces := createTestData(t)
+	assert.Nil(t, cache.Set(block, receipts, traces))
+
+	traces, exist := cache.GetBlockTraces(120177555)
+	assert.True(t, exist)
+	assert.Len(t, traces, 6)
+	assert.Equal(t, uint64(120177555), traces[0].BlockNumber)
+	assert.Equal(t, common.HexToHash("0x5f9cecca56bd3bfda5ba448b36e7f22c9448ed52b2eff79379e38ab5b4c421e6"), traces[0].BlockHash)
+}
+
+func TestEthCache_GetTransactionTraces(t *testing.T) {
+	cache := createTestCache()
+	block, receipts, traces := createTestData(t)
+	assert.Nil(t, cache.Set(block, receipts, traces))
+
+	traces, exist := cache.GetTransactionTraces(common.HexToHash("0x302df74adbc6f7481d341c2e09814b7e777624d05e3caccbc51a351f7749bb19"))
+	assert.True(t, exist)
+	assert.Len(t, traces, 6)
+	assert.Equal(t, uint64(120177555), traces[0].BlockNumber)
+	assert.Equal(t, common.HexToHash("0x5f9cecca56bd3bfda5ba448b36e7f22c9448ed52b2eff79379e38ab5b4c421e6"), traces[0].BlockHash)
 }

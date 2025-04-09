@@ -2,12 +2,10 @@ package cache
 
 import (
 	"container/list"
-	"encoding/json"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/openweb3/web3go/types"
-	"github.com/sirupsen/logrus"
 )
 
 type EthCache struct {
@@ -24,17 +22,21 @@ type EthCache struct {
 
 func MustNewEthCache() *EthCache {
 	return &EthCache{
+		blocks:   make(map[uint64]*types.Block),
+		receipts: make(map[uint64][]*types.Receipt),
+		traces:   make(map[uint64][]types.LocalizedTrace),
+
 		blockNumbers: *list.New(),
-		blocks:       make(map[uint64]*types.Block),
+		blockHashes:  make(map[common.Hash]uint64),
 		transactions: make(map[common.Hash]Transaction),
-		receipts:     make(map[uint64][]*types.Receipt),
-		traces:       make(map[uint64][]types.LocalizedTrace),
 	}
 }
 
 func (c *EthCache) Set(block *types.Block, receipts []*types.Receipt, traces []types.LocalizedTrace) error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
+
+	// TODO evict if exceeds maxsize
 
 	bn := block.Number.Uint64()
 	c.blocks[bn] = block
@@ -50,16 +52,6 @@ func (c *EthCache) Set(block *types.Block, receipts []*types.Receipt, traces []t
 		}
 	}
 
-	blockj, _ := json.Marshal(block)
-	receiptsj, _ := json.Marshal(receipts)
-	tracesj, _ := json.Marshal(traces)
-	logrus.WithFields(logrus.Fields{
-		"bn":       block.Number.Uint64(),
-		"block":    string(blockj),
-		"receipts": string(receiptsj),
-		"traces":   string(tracesj),
-	}).Info("debug set cache ===1===")
-
 	return nil
 }
 
@@ -70,8 +62,15 @@ func (c *EthCache) GetBlockByNumber(blockNumber uint64, isFull bool) (*types.Blo
 	}
 
 	if !isFull {
-		txOrHashList := types.NewTxOrHashListByHashes(block.Transactions.Hashes())
-		block.Transactions = *txOrHashList
+		hashes := make([]common.Hash, 0)
+		for _, tx := range block.Transactions.Transactions() {
+			hashes = append(hashes, tx.Hash)
+		}
+		txOrHashList := types.NewTxOrHashListByHashes(hashes)
+
+		blockClone := *block
+		blockClone.Transactions = *txOrHashList
+		return &blockClone, exists
 	}
 
 	return block, exists
@@ -83,17 +82,7 @@ func (c *EthCache) GetBlockByHash(blockHash common.Hash, isFull bool) (*types.Bl
 		return nil, false
 	}
 
-	block, exists := c.blocks[blockNumber]
-	if !exists {
-		return nil, false
-	}
-
-	if !isFull {
-		txOrHashList := types.NewTxOrHashListByHashes(block.Transactions.Hashes())
-		block.Transactions = *txOrHashList
-	}
-
-	return block, exists
+	return c.GetBlockByNumber(blockNumber, isFull)
 }
 
 func (c *EthCache) GetTransactionByHash(txHash common.Hash) (*types.TransactionDetail, bool) {
