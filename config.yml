@@ -1,7 +1,7 @@
 # EVM space SDK client configurations
 eth:
   # Fullnode HTTP endpoint
-  url: http://evm-internal.confluxrpc.com
+  http: [http://evm-internal.confluxrpc.com]
   # Retry times if failure, if 0 never
   # retry: 0
   # Interval duration before each retry

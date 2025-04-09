@@ -15,11 +15,11 @@ import (
 
 // DataContext context to hold sdk clients for blockchain interoperation.
 type DataContext struct {
-	Eth *web3go.Client
+	Eths []*web3go.Client
 }
 
-type SdkConfig struct {
-	URL             string
+type ClientsConfig struct {
+	Http            []string
 	Retry           int
 	RetryInterval   time.Duration `default:"1s"`
 	RequestTimeout  time.Duration `default:"3s"`
@@ -27,22 +27,30 @@ type SdkConfig struct {
 }
 
 func MustInitDataContext() DataContext {
-	sdkCfg := SdkConfig{}
-	viper.MustUnmarshalKey("eth", &sdkCfg)
+	clientsConfig := ClientsConfig{}
+	viper.MustUnmarshalKey("eth", &clientsConfig)
+
 	opt := web3go.ClientOption{}
-	opt.WithRetry(sdkCfg.Retry, sdkCfg.RetryInterval).
-		WithTimout(sdkCfg.RequestTimeout).
-		WithMaxConnectionPerHost(sdkCfg.MaxConnsPerHost)
-	eth := web3go.MustNewClientWithOption(sdkCfg.URL, opt)
+	opt.WithRetry(clientsConfig.Retry, clientsConfig.RetryInterval).
+		WithTimout(clientsConfig.RequestTimeout).
+		WithMaxConnectionPerHost(clientsConfig.MaxConnsPerHost)
+
+	eths := make([]*web3go.Client, 0)
+	for _, http := range clientsConfig.Http {
+		eth := web3go.MustNewClientWithOption(http, opt)
+		eths = append(eths, eth)
+	}
 
 	return DataContext{
-		Eth: eth,
+		Eths: eths,
 	}
 }
 
 func (ctx *DataContext) Close() {
-	if ctx.Eth != nil {
-		ctx.Eth.Close()
+	for _, eth := range ctx.Eths {
+		if eth != nil {
+			eth.Close()
+		}
 	}
 }
 

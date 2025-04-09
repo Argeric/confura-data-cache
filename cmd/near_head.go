@@ -24,11 +24,15 @@ func startCacheService(*cobra.Command, []string) {
 	dataCtx := MustInitDataContext()
 	defer dataCtx.Close()
 
-	syncer := cdcSync.MustNewEthSyncer(dataCtx.Eth)
-
 	ctx, cancel := context.WithCancel(context.Background())
 	var wg sync.WaitGroup
-	go syncer.Start(ctx, &wg)
+
+	syncers := make([]*cdcSync.EthSyncer, 0)
+	for _, eth := range dataCtx.Eths {
+		syncer := cdcSync.MustNewEthSyncer(eth)
+		syncers = append(syncers, syncer)
+		go syncer.Start(ctx, &wg)
+	}
 
 	GracefulShutdown(&wg, cancel)
 }
