@@ -100,7 +100,20 @@ func TestEthCache_GetBlockReceipts(t *testing.T) {
 	block, receipts, traces := createTestData(t)
 	assert.Nil(t, cache.Set(block, receipts, traces))
 
-	receipts, exist := cache.GetBlockReceipts(120177555)
+	// get block receipts by number
+	blockNumOrHash := types.BlockNumberOrHashWithNumber(120177555)
+	receipts, exist, err := cache.GetBlockReceipts(blockNumOrHash)
+	assert.Nil(t, err)
+	assert.True(t, exist)
+	assert.Len(t, receipts, 1)
+	assert.Equal(t, uint64(120177555), receipts[0].BlockNumber)
+	assert.Equal(t, common.HexToHash("0x5f9cecca56bd3bfda5ba448b36e7f22c9448ed52b2eff79379e38ab5b4c421e6"), receipts[0].BlockHash)
+	assert.Equal(t, common.HexToHash("0x302df74adbc6f7481d341c2e09814b7e777624d05e3caccbc51a351f7749bb19"), receipts[0].TransactionHash)
+
+	// get block receipts by hash
+	blockNumOrHash = types.BlockNumberOrHashWithHash(common.HexToHash("0x5f9cecca56bd3bfda5ba448b36e7f22c9448ed52b2eff79379e38ab5b4c421e6"), false)
+	receipts, exist, err = cache.GetBlockReceipts(blockNumOrHash)
+	assert.Nil(t, err)
 	assert.True(t, exist)
 	assert.Len(t, receipts, 1)
 	assert.Equal(t, uint64(120177555), receipts[0].BlockNumber)
@@ -125,7 +138,19 @@ func TestEthCache_GetBlockTraces(t *testing.T) {
 	block, receipts, traces := createTestData(t)
 	assert.Nil(t, cache.Set(block, receipts, traces))
 
-	traces, exist := cache.GetBlockTraces(120177555)
+	// get block traces by number
+	blockNumOrHash := types.BlockNumberOrHashWithNumber(120177555)
+	traces, exist, err := cache.GetBlockTraces(blockNumOrHash)
+	assert.Nil(t, err)
+	assert.True(t, exist)
+	assert.Len(t, traces, 6)
+	assert.Equal(t, uint64(120177555), traces[0].BlockNumber)
+	assert.Equal(t, common.HexToHash("0x5f9cecca56bd3bfda5ba448b36e7f22c9448ed52b2eff79379e38ab5b4c421e6"), traces[0].BlockHash)
+
+	// get block traces by hash
+	blockNumOrHash = types.BlockNumberOrHashWithHash(common.HexToHash("0x5f9cecca56bd3bfda5ba448b36e7f22c9448ed52b2eff79379e38ab5b4c421e6"), false)
+	traces, exist, err = cache.GetBlockTraces(blockNumOrHash)
+	assert.Nil(t, err)
 	assert.True(t, exist)
 	assert.Len(t, traces, 6)
 	assert.Equal(t, uint64(120177555), traces[0].BlockNumber)
