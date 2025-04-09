@@ -3,140 +3,158 @@ package cache
 import (
 	"container/list"
 	"encoding/json"
-	"github.com/sirupsen/logrus"
 	"sync"
 
-	"github.com/Conflux-Chain/confura-data-cache/nearhead/config"
-	viperUtil "github.com/Conflux-Chain/go-conflux-util/viper"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/openweb3/web3go/types"
+	"github.com/sirupsen/logrus"
 )
 
 type EthCache struct {
-	config   *config.Config
-	blocks   *BlocksCache
-	receipts *ReceiptsCache
-	traces   *TracesCache
-}
+	blocks   map[uint64]*types.Block
+	receipts map[uint64][]*types.Receipt
+	traces   map[uint64][]types.LocalizedTrace
 
-type BlocksCache struct {
-	cache map[uint64]*types.Block
-	bns   *list.List
-	size  uint64
-	mutex sync.Mutex
-}
+	blockNumbers list.List
+	blockHashes  map[common.Hash]uint64
+	transactions map[common.Hash]Transaction
 
-type ReceiptsCache struct {
-	cache map[uint64][]types.Receipt
-	bns   *list.List
-	size  uint64
-	mutex sync.Mutex
-}
-
-type TracesCache struct {
-	cache map[uint64][]types.LocalizedTrace
-	bns   *list.List
-	size  uint64
 	mutex sync.Mutex
 }
 
 func MustNewEthCache() *EthCache {
-	var cfg config.Config
-	viperUtil.MustUnmarshalKey("nearHead", &cfg)
-
-	blocks := BlocksCache{
-		cache: make(map[uint64]*types.Block),
-		bns:   list.New(),
-	}
-	receipts := ReceiptsCache{
-		cache: make(map[uint64][]types.Receipt),
-		bns:   list.New(),
-	}
-	traces := TracesCache{
-		cache: make(map[uint64][]types.LocalizedTrace),
-		bns:   list.New(),
-	}
-
 	return &EthCache{
-		config:   &cfg,
-		blocks:   &blocks,
-		receipts: &receipts,
-		traces:   &traces,
+		blockNumbers: *list.New(),
+		blocks:       make(map[uint64]*types.Block),
+		transactions: make(map[common.Hash]Transaction),
+		receipts:     make(map[uint64][]*types.Receipt),
+		traces:       make(map[uint64][]types.LocalizedTrace),
 	}
 }
 
-func (c *EthCache) AddBlock(block *types.Block) {
-	c.blocks.mutex.Lock()
-	defer c.blocks.mutex.Unlock()
+func (c *EthCache) Set(block *types.Block, receipts []*types.Receipt, traces []types.LocalizedTrace) error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 
-	blockj, _ := json.Marshal(block)
-	logrus.WithFields(logrus.Fields{
-		"bn":    block.Number.Uint64(),
-		"block": string(blockj),
-	}).Info("debug add block ===1===")
+	bn := block.Number.Uint64()
+	c.blocks[bn] = block
+	c.receipts[bn] = receipts
+	c.traces[bn] = traces
 
-	/*blockSize := block.Size
-	c.evictIfNeeded(c.blocks.size, blockSize, c.config.CacheSizeBlocks, c.blocks, c.blocks.bns)
-
-	c.blocks.bns.PushFront(block.Number)
-	c.blocks.cache[block.Number.Uint64()] = block
-	c.blocks.size += blockSize*/
-}
-
-func (c *EthCache) AddReceipts(blockNumber uint64, receipts []types.Receipt) {
-	c.receipts.mutex.Lock()
-	defer c.receipts.mutex.Unlock()
-
-	receiptsj, _ := json.Marshal(receipts)
-	logrus.WithFields(logrus.Fields{
-		"bn":       blockNumber,
-		"receipts": string(receiptsj),
-	}).Info("debug add receipts ===2===")
-
-	/*receiptsSize := uint64(0)
-	c.evictIfNeeded(c.receipts.size, receiptsSize, c.config.CacheSizeReceipts, c.receipts, c.receipts.bns)
-
-	c.receipts.bns.PushFront(blockNumber)
-	c.receipts.cache[blockNumber] = receipts
-	c.receipts.size += receiptsSize*/
-}
-
-func (c *EthCache) AddTraces(blockNumber uint64, traces []types.LocalizedTrace) {
-	c.traces.mutex.Lock()
-	defer c.traces.mutex.Unlock()
-
-	tracesj, _ := json.Marshal(traces)
-	logrus.WithFields(logrus.Fields{
-		"bn":     blockNumber,
-		"traces": string(tracesj),
-	}).Info("debug add traces ===3===")
-
-	/*traceSize := uint64(0)
-	c.evictIfNeeded(c.traces.size, traceSize, c.config.CacheSizeTraces, c.traces.cache, c.traces.bns)
-
-	c.traces.bns.PushFront(blockNumber)
-	c.traces.cache[blockNumber] = traces
-	c.traces.size += traceSize*/
-}
-
-func (c *EthCache) evictIfNeeded(currentSize uint64, newItemSize uint64, maxSize uint64,
-	cache interface{}, l *list.List) {
-	if currentSize+newItemSize > maxSize {
-		for e := l.Back(); e != nil; e = e.Prev() {
-			blockNumber := e.Value.(uint64)
-			switch c := cache.(type) {
-			case map[uint64]*types.Block:
-				delete(c, blockNumber)
-			case map[uint64][]types.Receipt:
-				delete(c, blockNumber)
-			case map[uint64][]types.LocalizedTrace:
-				delete(c, blockNumber)
-			}
-
-			l.Remove(e)
-
-			if currentSize+newItemSize <= maxSize {
-				break
-			}
+	c.blockNumbers.PushFront(bn)
+	c.blockHashes[block.Hash] = bn
+	for _, tx := range block.Transactions.Transactions() {
+		c.transactions[tx.Hash] = Transaction{
+			blockNumber:      bn,
+			transactionIndex: *tx.TransactionIndex,
 		}
 	}
+
+	blockj, _ := json.Marshal(block)
+	receiptsj, _ := json.Marshal(receipts)
+	tracesj, _ := json.Marshal(traces)
+	logrus.WithFields(logrus.Fields{
+		"bn":       block.Number.Uint64(),
+		"block":    string(blockj),
+		"receipts": string(receiptsj),
+		"traces":   string(tracesj),
+	}).Info("debug set cache ===1===")
+
+	return nil
+}
+
+func (c *EthCache) GetBlockByNumber(blockNumber uint64, isFull bool) (*types.Block, bool) {
+	block, exists := c.blocks[blockNumber]
+	if !exists {
+		return nil, false
+	}
+
+	if !isFull {
+		txOrHashList := types.NewTxOrHashListByHashes(block.Transactions.Hashes())
+		block.Transactions = *txOrHashList
+	}
+
+	return block, exists
+}
+
+func (c *EthCache) GetBlockByHash(blockHash common.Hash, isFull bool) (*types.Block, bool) {
+	blockNumber, exists := c.blockHashes[blockHash]
+	if !exists {
+		return nil, false
+	}
+
+	block, exists := c.blocks[blockNumber]
+	if !exists {
+		return nil, false
+	}
+
+	if !isFull {
+		txOrHashList := types.NewTxOrHashListByHashes(block.Transactions.Hashes())
+		block.Transactions = *txOrHashList
+	}
+
+	return block, exists
+}
+
+func (c *EthCache) GetTransactionByHash(txHash common.Hash) (*types.TransactionDetail, bool) {
+	txCache, exists := c.transactions[txHash]
+	if !exists {
+		return nil, false
+	}
+
+	block, exists := c.blocks[txCache.blockNumber]
+	if !exists {
+		return nil, false
+	}
+
+	tx := block.Transactions.Transactions()[txCache.transactionIndex]
+	return &tx, true
+}
+
+func (c *EthCache) GetBlockReceipts(blockNumber uint64) ([]*types.Receipt, bool) {
+	receipts, exists := c.receipts[blockNumber]
+	return receipts, exists
+}
+
+func (c *EthCache) GetTransactionReceipt(txHash common.Hash) (*types.Receipt, bool) {
+	txCache, exists := c.transactions[txHash]
+	if !exists {
+		return nil, false
+	}
+
+	receipts, exists := c.receipts[txCache.blockNumber]
+	if !exists {
+		return nil, false
+	}
+
+	receipt := receipts[txCache.transactionIndex]
+	return receipt, true
+}
+
+func (c *EthCache) GetBlockTraces(blockNumber uint64) ([]types.LocalizedTrace, bool) {
+	traces, exists := c.traces[blockNumber]
+	return traces, exists
+}
+
+func (c *EthCache) GetTransactionTraces(txHash common.Hash) ([]types.LocalizedTrace, bool) {
+	txCache, exists := c.transactions[txHash]
+	if !exists {
+		return nil, false
+	}
+
+	traces, exists := c.traces[txCache.blockNumber]
+
+	txTraces := make([]types.LocalizedTrace, 0)
+	for _, trace := range traces {
+		if txHash == *trace.TransactionHash {
+			txTraces = append(txTraces, trace)
+		}
+	}
+
+	return txTraces, exists
+}
+
+type Transaction struct {
+	blockNumber      uint64
+	transactionIndex uint64
 }

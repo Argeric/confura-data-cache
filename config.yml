@@ -1,7 +1,7 @@
 # EVM space SDK client configurations
 eth:
   # Fullnode HTTP endpoint
-  url: https://evmrpc-test-us.0g.ai
+  url: http://evm-internal.confluxrpc.com
   # Retry times if failure, if 0 never
   # retry: 0
   # Interval duration before each retry
@@ -14,8 +14,5 @@ eth:
 # Blockchain near head cache configurations
 nearHead:
   # Cache size in MB
-  cacheSize:
-    blocks: 100
-    txs: 100
-    receipts: 100
-    traces: 100
+  cacheSize: 100
+

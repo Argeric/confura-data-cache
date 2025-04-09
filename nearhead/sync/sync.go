@@ -91,19 +91,18 @@ func (s *EthSyncer) cacheBlock(blockNumber uint64) error {
 	if err != nil {
 		return err
 	}
-	s.memory.AddBlock(block)
 
 	receipts, err := GetBlockReceipts(s.eth, types.BlockNumber(blockNumber))
 	if err != nil {
 		return err
 	}
-	s.memory.AddReceipts(blockNumber, receipts)
 
 	traces, err := GetBlockTraces(s.eth, types.BlockNumber(blockNumber))
 	if err != nil {
 		return err
 	}
-	s.memory.AddTraces(blockNumber, traces)
+
+	s.memory.Set(block, receipts, traces)
 
 	return nil
 }
@@ -121,9 +120,9 @@ func GetBlockByNumber(w3c *web3go.Client, blockNumber types.BlockNumber, isFull 
 	return block, nil
 }
 
-func GetBlockReceipts(w3c *web3go.Client, blockNumber types.BlockNumber) ([]types.Receipt, error) {
+func GetBlockReceipts(w3c *web3go.Client, blockNumber types.BlockNumber) ([]*types.Receipt, error) {
 	blockNumOrHash := types.BlockNumberOrHashWithNumber(blockNumber)
-	receipts, err := w3c.Parity.BlockReceipts(&blockNumOrHash)
+	receipts, err := w3c.Eth.BlockReceipts(&blockNumOrHash)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "Failed to get block receipts %v", blockNumber)
 	}
@@ -139,11 +138,11 @@ func GetBlockTraces(w3c *web3go.Client, blockNumber types.BlockNumber) ([]types.
 	blockNumOrHash := types.BlockNumberOrHashWithNumber(blockNumber)
 	traces, err := w3c.Trace.Blocks(blockNumOrHash)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "Failed to get block receipts %v", blockNumber)
+		return nil, errors.WithMessagef(err, "Failed to get block traces %v", blockNumber)
 	}
 
 	if traces == nil {
-		return nil, errors.Errorf("Invalid nil block receipts %v", blockNumber)
+		return nil, errors.Errorf("Invalid nil block traces %v", blockNumber)
 	}
 
 	return traces, nil
