@@ -102,7 +102,9 @@ func (s *EthSyncer) cacheBlock(blockNumber uint64) error {
 		return err
 	}
 
-	s.memory.Set(block, receipts, traces)
+	if err := s.memory.Set(block, receipts, traces); err != nil {
+		return err
+	}
 
 	return nil
 }
