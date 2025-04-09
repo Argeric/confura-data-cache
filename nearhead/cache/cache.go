@@ -28,7 +28,7 @@ func MustNewEthCache() *EthCache {
 		receipts: make(map[uint64][]*types.Receipt),
 		traces:   make(map[uint64][]types.LocalizedTrace),
 
-		blockNumbers: *list.New(),                       // for evict from list's front
+		blockNumbers: *list.New(),                       // for evict from list front
 		blockHashes:  make(map[common.Hash]uint64),      // mapping from block hash to number, for query by block hash
 		transactions: make(map[common.Hash]Transaction), // mapping from tx hash to block number and tx index, for query by tx hash
 	}
